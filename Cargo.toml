@@ -1,0 +1,14 @@
+[package]
+name = "sillycord-bot"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dotenv = "0.15.0"
+poise = "0.6.1"
+serenity = "0.12.4"
+sqlx = { version = "0.8", features = [ "runtime-tokio", "tls-rustls-ring", "mysql" ] }
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
+serde = { version = "1.0.215", features = ["derive"] }
