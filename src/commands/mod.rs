@@ -4,3 +4,5 @@ pub mod cta;
 pub mod dog;
 pub mod profile;
 pub mod action;
+pub mod eval;
+pub mod quote;

@@ -1,3 +1,4 @@
+use crate::structs::quote::Quote;
 use crate::structs::user::User;
 use sqlx::MySqlPool;
 
@@ -98,5 +99,81 @@ impl DatabaseController {
             .await?;
 
         Ok(())
+    }
+
+    pub async fn kv_set(&self, key: &str, value: &str) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            "INSERT INTO kv_store (`key`, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = ?",
+            key,
+            value,
+            value
+        )
+        .execute(&self.db)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn kv_get(&self, key: &str) -> Result<Option<String>, sqlx::Error> {
+        let kv = sqlx::query!("SELECT * FROM kv_store WHERE `key` = ?", key)
+            .fetch_optional(&self.db)
+            .await?;
+
+        match kv {
+            Some(kv) => Ok(kv.value),
+            None => Ok(None),
+        }
+    }
+
+    pub async fn quote_create(&self, quote: Quote) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            "INSERT INTO quotes (user_id, username, quote, added_by) VALUES (?, ?, ?, ?)",
+            quote.user_id,
+            quote.username,
+            quote.quote,
+            quote.added_by
+        )
+        .execute(&self.db)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn quote_get_random(&self) -> Result<Option<Quote>, sqlx::Error> {
+        let quote = sqlx::query!("SELECT * FROM quotes ORDER BY RAND() LIMIT 1")
+            .fetch_optional(&self.db)
+            .await?;
+
+        match quote {
+            Some(quote) => Ok(Some(Quote {
+                quote_id: quote.quote_id,
+                user_id: quote.user_id,
+                username: quote.username,
+                quote: quote.quote,
+                added_by: quote.added_by,
+                added_at: quote.added_at.unwrap(),
+            })),
+            None => Ok(None),
+        }
+    }
+
+    pub async fn quote_get_by_user_id(&self, user_id: u64) -> Result<Vec<Quote>, sqlx::Error> {
+        let quote = sqlx::query!("SELECT * FROM quotes WHERE user_id = ?", user_id)
+            .fetch_all(&self.db)
+            .await?;
+
+        let mut quotes = Vec::new();
+        for q in quote {
+            quotes.push(Quote {
+                quote_id: q.quote_id,
+                user_id: q.user_id,
+                username: q.username,
+                quote: q.quote,
+                added_by: q.added_by,
+                added_at: q.added_at.unwrap(),
+            });
+        }
+
+        Ok(quotes)
     }
 }

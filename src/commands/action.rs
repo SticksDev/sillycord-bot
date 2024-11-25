@@ -1,7 +1,6 @@
 use crate::{utils, Context, Error};
 use poise::CreateReply;
 use serenity::all::{CreateAllowedMentions, CreateAttachment, Message};
-use serenity::builder::CreateMessage;
 use serenity::model::prelude::UserId;
 use serenity::prelude::Mentionable;
 

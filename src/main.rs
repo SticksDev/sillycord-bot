@@ -4,6 +4,8 @@ mod handlers;
 mod structs;
 mod utils;
 
+use std::sync::Arc;
+
 use events::event_handler;
 use handlers::db::DatabaseController;
 use serde::{Deserialize, Serialize};
@@ -78,6 +80,7 @@ async fn init_sqlx() -> MySqlPool {
 
 struct Data {
     database_controller: DatabaseController,
+    owners: Vec<u64>,
     uptime: std::time::Instant,
     config: Config,
     vouch_store: Mutex<Vec<Vouch>>,
@@ -99,6 +102,7 @@ struct Channels {
     main: u64,
     logs_public: u64,
     logs_mod: u64,
+    starboard: u64,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -136,6 +140,7 @@ async fn main() {
                     main: 0,
                     logs_public: 0,
                     logs_mod: 0,
+                    starboard: 0,
                 },
                 roles: Roles {
                     admin: 0,
@@ -160,7 +165,9 @@ async fn main() {
     let pool = init_sqlx().await;
 
     info!("initializing bot");
-    let intents = GatewayIntents::privileged();
+    let intents = GatewayIntents::privileged()
+        | GatewayIntents::GUILD_MEMBERS
+        | GatewayIntents::GUILD_MESSAGES;
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions::<Data, Error> {
@@ -173,9 +180,21 @@ async fn main() {
                 commands::action::use_action_hug(),
                 commands::action::use_action_kiss(),
                 commands::action::use_action_pat(),
+                commands::eval::eval(),
+                commands::quote::quote_action(),
+                commands::quote::random_quote(),
+                commands::quote::user_quotes(),
             ],
             event_handler: |ctx, event, framework, data| {
                 Box::pin(event_handler(ctx, event, framework, data))
+            },
+            prefix_options: poise::PrefixFrameworkOptions {
+                prefix: Some("~".into()),
+                edit_tracker: Some(Arc::new(poise::EditTracker::for_timespan(
+                    std::time::Duration::from_secs(3600),
+                ))),
+                case_insensitive_commands: true,
+                ..Default::default()
             },
             ..Default::default()
         })
@@ -188,6 +207,8 @@ async fn main() {
                     uptime: std::time::Instant::now(),
                     config,
                     vouch_store: Mutex::new(Vec::new()),
+                    // Sticks, Emi, Katie
+                    owners: vec![1017196087276220447, 272871217256726531, 1033331958291369984],
                 })
             })
         })
