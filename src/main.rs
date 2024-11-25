@@ -1,10 +1,19 @@
 mod commands;
 mod events;
+mod handlers;
+mod structs;
+mod utils;
 
 use events::event_handler;
-use serenity::all::{ClientBuilder, GatewayIntents};
+use handlers::db::DatabaseController;
+use serde::{Deserialize, Serialize};
+use serenity::{
+    all::{ClientBuilder, GatewayIntents},
+    futures::lock::Mutex,
+};
 use sqlx::mysql::MySqlPoolOptions;
 use sqlx::MySqlPool;
+use structs::vouch::Vouch;
 use tracing::{event, info, info_span, Level};
 
 fn check_required_env_vars() {
@@ -68,10 +77,36 @@ async fn init_sqlx() -> MySqlPool {
 }
 
 struct Data {
-    sqlx_pool: MySqlPool,
+    database_controller: DatabaseController,
+    uptime: std::time::Instant,
+    config: Config,
+    vouch_store: Mutex<Vec<Vouch>>,
 } // User data, which is stored and accessible in all command invocations
-type Error = Box<dyn std::error::Error + Send + Sync>;
+
+pub type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 type Context<'a> = poise::Context<'a, Data, Error>;
+
+#[derive(Deserialize, Serialize)]
+struct Config {
+    main_guild_id: u64,
+    channels: Channels,
+    roles: Roles,
+}
+
+#[derive(Deserialize, Serialize)]
+struct Channels {
+    welcome: u64,
+    main: u64,
+    logs_public: u64,
+    logs_mod: u64,
+}
+
+#[derive(Deserialize, Serialize)]
+struct Roles {
+    admin: u64,
+    mod_role: u64,
+    silly_role: u64,
+}
 
 #[tokio::main]
 async fn main() {
@@ -88,15 +123,57 @@ async fn main() {
     info!("checking required environment variables");
     check_required_env_vars();
 
+    info!("loading config");
+    // Do we have a config.toml file? If we do, load it
+    // If we don't, create it with the default values, then exit the program and tell the user to fill it out
+    let config: Config = match std::fs::read_to_string("config.toml") {
+        Ok(config) => toml::from_str(&config).expect("failed to parse config.toml"),
+        Err(_) => {
+            let default_config = Config {
+                main_guild_id: 0,
+                channels: Channels {
+                    welcome: 0,
+                    main: 0,
+                    logs_public: 0,
+                    logs_mod: 0,
+                },
+                roles: Roles {
+                    admin: 0,
+                    mod_role: 0,
+                    silly_role: 0,
+                },
+            };
+            let default_config_toml = toml::to_string_pretty(&default_config).unwrap();
+            std::fs::write("config.toml", default_config_toml)
+                .expect("failed to write config.toml");
+            event!(Level::WARN, "config.toml not found, created a default one");
+            event!(
+                Level::ERROR,
+                "please fill out config.toml and restart the bot"
+            );
+
+            panic!("config.toml not found, created a default one, please fill it out and restart the bot");
+        }
+    };
+
     info!("initializing SQLx");
     let pool = init_sqlx().await;
 
     info!("initializing bot");
-    let intents = GatewayIntents::non_privileged();
+    let intents = GatewayIntents::privileged();
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions::<Data, Error> {
-            commands: vec![commands::ping::ping()],
+            commands: vec![
+                commands::ping::ping(),
+                commands::vouch::vouch(),
+                commands::profile::profiles(),
+                commands::dog::dog(),
+                commands::cta::cta(),
+                commands::action::use_action_hug(),
+                commands::action::use_action_kiss(),
+                commands::action::use_action_pat(),
+            ],
             event_handler: |ctx, event, framework, data| {
                 Box::pin(event_handler(ctx, event, framework, data))
             },
@@ -107,7 +184,10 @@ async fn main() {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
                 Ok(Data {
                     // Initialize user data here
-                    sqlx_pool: pool,
+                    database_controller: DatabaseController::new(pool.clone()),
+                    uptime: std::time::Instant::now(),
+                    config,
+                    vouch_store: Mutex::new(Vec::new()),
                 })
             })
         })
