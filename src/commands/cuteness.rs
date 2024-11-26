@@ -51,6 +51,9 @@ pub async fn cutenesss(
     let id_factor = user_id % 100;
     let cuteness_score = (charm_factor + randomness_factor + humor_factor + id_factor) % 101;
 
+    // Pow by .5 to make the cuteness score more random
+    let cuteness_score = (cuteness_score as f64).powf(0.5) as i64;
+
     thinking_message
         .edit(
             ctx,
