@@ -1,5 +1,6 @@
 use poise::CreateReply;
-use rand::Rng;
+use rand::{Rng, SeedableRng};
+use rand_pcg::Pcg32;
 use serenity::all::{CreateAllowedMentions, User};
 
 use crate::{Context, Error};
@@ -39,14 +40,27 @@ pub async fn cutenesss(
             .await?;
     }
 
+    // Convert the users id to a byte array;
+    let mut rng = Pcg32::seed_from_u64(user.id.into());
+    let charm_factor = rng.gen_range(20..50);
+    let randomness_factor = rng.gen_range(10..30);
+    let humor_factor = rng.gen_range(5..20);
+
+    // Convert the users id to a i64
+    let user_id: i64 = user.id.into();
+    let id_factor = user_id % 100;
+    let cuteness_score = (charm_factor + randomness_factor + humor_factor + id_factor) % 101;
+
+    // Pow cuteness_score by 2 to make it more likely to be higher
+    let cuteness_score = cuteness_score.pow(2);
+
     thinking_message
         .edit(
             ctx,
             CreateReply::default()
                 .content(format!(
                     "I have determined that {} is {}% cute!",
-                    user.name,
-                    rand::thread_rng().gen_range(0..101)
+                    user.name, cuteness_score
                 ))
                 .allowed_mentions(CreateAllowedMentions::default().users(vec![user.id])),
         )
