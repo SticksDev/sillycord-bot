@@ -7,5 +7,5 @@ pub struct Quote {
     pub username: String,
     pub quote: String,
     pub added_by: i64,
-    pub added_at: OffsetDateTime,
+    pub added_at: Option<OffsetDateTime>,
 }

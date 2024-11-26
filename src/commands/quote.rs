@@ -14,7 +14,7 @@ pub async fn quote_action(
         username: message.author.name.clone(),
         quote: message.content.clone(),
         added_by: ctx.author().id.into(),
-        added_at: OffsetDateTime::now_utc(),
+        added_at: Some(OffsetDateTime::now_utc()),
     };
 
     if quote.user_id == quote.added_by {
@@ -40,7 +40,12 @@ pub async fn random_quote(ctx: Context<'_>) -> Result<(), Error> {
                     "{}: {}\nQuoted at: <t:{}:f> by <@{}>",
                     quote.username,
                     quote.quote,
-                    quote.added_at.unix_timestamp(),
+                    if let Some(added_at) = quote.added_at {
+                        added_at.unix_timestamp()
+                    } else {
+                        // Use now if added_at is None
+                        OffsetDateTime::now_utc().unix_timestamp()
+                    },
                     quote.added_by
                 ))
                 .allowed_mentions(CreateAllowedMentions::new().empty_users()),
@@ -76,7 +81,12 @@ pub async fn user_quotes(
             "{}: {}\nQuoted at: <t:{}:f> by <@{}>\n",
             quote.username,
             quote.quote,
-            quote.added_at.unix_timestamp(),
+            if let Some(added_at) = quote.added_at {
+                added_at.unix_timestamp()
+            } else {
+                // Use now if added_at is None
+                OffsetDateTime::now_utc().unix_timestamp()
+            },
             quote.added_by
         ));
     }
