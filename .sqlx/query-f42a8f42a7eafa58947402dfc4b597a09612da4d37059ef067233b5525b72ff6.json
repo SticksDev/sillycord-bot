@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "INSERT INTO quotes (user_id, username, quote, added_by) VALUES (?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "f42a8f42a7eafa58947402dfc4b597a09612da4d37059ef067233b5525b72ff6"
+}
