@@ -55,8 +55,7 @@ pub async fn submit(
 
     // Send a messasge to the mod-logs channel with a ping that a new vouch has been submitted
     let log_msg = format!(
-        "{} {}\n:notepad_spiral: A new vouch has been submitted for {} by {}, please either approve or deny this vouch.",
-        serenity::model::id::RoleId::new(ctx.data().config.roles.mod_role).mention(),
+        "{}\n:notepad_spiral: A new vouch has been submitted for {} by {}, please either approve or deny this vouch.",
         serenity::model::id::RoleId::new(ctx.data().config.roles.admin).mention(),
         user.clone().mention(),
         ctx.author().mention()
@@ -70,10 +69,7 @@ pub async fn submit(
         .send_message(
             ctx.serenity_context(),
             CreateMessage::new().content(log_msg).allowed_mentions(
-                CreateAllowedMentions::new().roles(vec![
-                    ctx.data().config.roles.mod_role,
-                    ctx.data().config.roles.admin,
-                ]),
+                CreateAllowedMentions::new().roles(vec![ctx.data().config.roles.admin]),
             ),
         )
         .await?;
@@ -98,10 +94,11 @@ pub async fn approve(
     match author_user {
         Some(author_user) => {
             // Check if the author is an admin
-            if !author_user.roles.iter().any(|role_id| {
-                *role_id == ctx.data().config.roles.admin
-                    || *role_id == ctx.data().config.roles.mod_role
-            }) {
+            if !author_user
+                .roles
+                .iter()
+                .any(|role_id| *role_id == ctx.data().config.roles.admin)
+            {
                 ctx.say(":x: You must be an admin to approve vouches!")
                     .await?;
                 return Ok(());
@@ -207,10 +204,11 @@ pub async fn deny(
     match author_user {
         Some(author_user) => {
             // Check if the author is an admin
-            if !author_user.roles.iter().any(|role_id| {
-                *role_id == ctx.data().config.roles.admin
-                    || *role_id == ctx.data().config.roles.mod_role
-            }) {
+            if !author_user
+                .roles
+                .iter()
+                .any(|role_id| *role_id == ctx.data().config.roles.admin)
+            {
                 ctx.say(":x: You must be an admin to deny vouches!").await?;
                 return Ok(());
             }

@@ -34,26 +34,6 @@ impl DatabaseController {
         }
     }
 
-    async fn get_user_by_id(&self, id: u64) -> Result<Option<User>, sqlx::Error> {
-        let user = sqlx::query!("SELECT * FROM users WHERE id = ?", id)
-            .fetch_optional(&self.db)
-            .await?;
-
-        match user {
-            Some(user) => Ok(Some(User {
-                id: user.id,
-                discord_id: user
-                    .discord_id
-                    .parse::<u64>()
-                    .map_err(|_| sqlx::Error::Decode("Failed to parse discord_id".into()))?,
-                actions_allowed: user.actions_allowed == Some(1),
-                about: user.about,
-                pronouns: user.pronouns,
-            })),
-            None => Ok(None),
-        }
-    }
-
     pub async fn create_user(&self, discord_id: u64) -> Result<User, sqlx::Error> {
         let user = sqlx::query!(
             "INSERT INTO users (discord_id) VALUES (?)",
@@ -81,14 +61,6 @@ impl DatabaseController {
         )
         .execute(&self.db)
         .await?;
-
-        Ok(())
-    }
-
-    pub async fn delete_user(&self, user: User) -> Result<(), sqlx::Error> {
-        sqlx::query!("DELETE FROM users WHERE id = ?", user.id)
-            .execute(&self.db)
-            .await?;
 
         Ok(())
     }
@@ -140,20 +112,20 @@ impl DatabaseController {
     }
 
     pub async fn quote_get_random(&self) -> Result<Option<Quote>, sqlx::Error> {
-        let quote = sqlx::query!("SELECT * FROM quotes ORDER BY RAND() LIMIT 1")
-            .fetch_optional(&self.db)
-            .await?;
+        let quote =
+            sqlx::query!("SELECT * FROM quotes ORDER BY RAND() LIMIT 1").fetch_one(&self.db);
 
-        match quote {
-            Some(quote) => Ok(Some(Quote {
-                quote_id: quote.quote_id,
-                user_id: quote.user_id,
-                username: quote.username,
-                quote: quote.quote,
-                added_by: quote.added_by,
-                added_at: Some(quote.added_at),
+        match quote.await {
+            Ok(q) => Ok(Some(Quote {
+                quote_id: q.quote_id,
+                user_id: q.user_id,
+                username: q.username,
+                quote: q.quote,
+                added_by: q.added_by,
+                added_at: q.added_at,
             })),
-            None => Ok(None),
+            Err(sqlx::Error::RowNotFound) => Ok(None),
+            Err(e) => Err(e),
         }
     }
 
@@ -170,7 +142,7 @@ impl DatabaseController {
                 username: q.username,
                 quote: q.quote,
                 added_by: q.added_by,
-                added_at: Some(q.added_at),
+                added_at: q.added_at,
             });
         }
 

@@ -108,7 +108,6 @@ struct Channels {
 #[derive(Deserialize, Serialize)]
 struct Roles {
     admin: u64,
-    mod_role: u64,
     silly_role: u64,
 }
 
@@ -144,7 +143,6 @@ async fn main() {
                 },
                 roles: Roles {
                     admin: 0,
-                    mod_role: 0,
                     silly_role: 0,
                 },
             };
