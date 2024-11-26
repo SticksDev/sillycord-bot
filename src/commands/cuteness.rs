@@ -20,15 +20,13 @@ pub async fn cutenesss(
         ":clipboard: Finalizing the report...",
     ];
 
-    let current_thinking_index = 0;
-    let thinking_message = ctx.say(thinking_messages[current_thinking_index]).await?;
+    let thinking_message = ctx.say(thinking_messages[0]).await?;
 
-    // Wait between .5 and 1.5 seconds for each message, then edit the message with the next thinking message
-    // On the last message, edit the message with the final message and wait 1.5 second
+    // Iterate through thinking messages with delays
     for i in 1..thinking_messages.len() {
         let wait_time = rand::thread_rng().gen_range(500..1501);
 
-        // Are we on the last message?
+        // Wait time logic for last message
         if i == thinking_messages.len() - 1 {
             tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
         } else {
@@ -40,26 +38,31 @@ pub async fn cutenesss(
             .await?;
     }
 
-    // Convert the users id to a byte array;
+    // Create a seeded RNG using the user's ID
     let mut rng = Pcg32::seed_from_u64(user.id.into());
-    let charm_factor = rng.gen_range(20..50);
-    let randomness_factor = rng.gen_range(10..30);
-    let humor_factor = rng.gen_range(5..20);
 
-    // Convert the users id to a i64
-    let user_id: i64 = user.id.into();
-    let id_factor = user_id % 100;
-    let cuteness_score = (charm_factor + randomness_factor + humor_factor + id_factor) % 101;
+    // Generate random factors
+    let charm_factor = rng.gen_range(0.2..0.5);
+    let randomness_factor = rng.gen_range(0.1..0.3);
+    let humor_factor = rng.gen_range(0.05..0.2);
 
-    // Pow by .5 to make the cuteness score more random
-    let cuteness_score = (cuteness_score as f64).powf(0.5) as i64;
+    // Calculate the cuteness score
+    let mut cuteness_score: f64 = charm_factor + randomness_factor + humor_factor;
 
+    // Normalize to 0.0 - 1.0 range (clamp if it exceeds 1.0 due to summing)
+    cuteness_score = cuteness_score.powf(0.5); // Adding non-linearity
+    cuteness_score = cuteness_score.min(1.0); // Ensure it's within range 0.0 to 1.0
+
+    // Format as a percentage
+    cuteness_score *= 100.0;
+
+    // Final message
     thinking_message
         .edit(
             ctx,
             CreateReply::default()
                 .content(format!(
-                    "I have determined that {} is {}% cute!",
+                    "I have determined that {} is {:.2}% cute!",
                     user.name, cuteness_score
                 ))
                 .allowed_mentions(CreateAllowedMentions::default().users(vec![user.id])),
