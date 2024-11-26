@@ -151,7 +151,7 @@ impl DatabaseController {
                 username: quote.username,
                 quote: quote.quote,
                 added_by: quote.added_by,
-                added_at: quote.added_at,
+                added_at: Some(quote.added_at),
             })),
             None => Ok(None),
         }
@@ -170,7 +170,7 @@ impl DatabaseController {
                 username: q.username,
                 quote: q.quote,
                 added_by: q.added_by,
-                added_at: q.added_at,
+                added_at: Some(q.added_at),
             });
         }
 
