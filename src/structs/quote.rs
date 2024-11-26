@@ -1,4 +1,4 @@
-use sqlx::types::time::OffsetDateTime;
+use time::OffsetDateTime;
 
 #[derive(Debug)]
 pub struct Quote {
