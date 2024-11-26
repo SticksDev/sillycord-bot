@@ -6,3 +6,4 @@ pub mod profile;
 pub mod action;
 pub mod eval;
 pub mod quote;
+pub mod cuteness;

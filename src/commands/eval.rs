@@ -4,6 +4,10 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
+use poise::CreateReply;
+use serenity::all::GetMessages;
+use tracing::{info, warn};
+
 use crate::{Context, Error};
 
 /// Evaluate rust code
@@ -16,13 +20,36 @@ pub async fn eval(
 
     // Check if the user is an owner
     if !authed_users.contains(&ctx.author().id.into()) {
-        ctx.say(":x: You are not authorized to run this command")
+        let channel_id = ctx.channel_id();
+
+        // Get messages in the channel (up to 100)
+        let messages = channel_id
+            .messages(&ctx, GetMessages::new().limit(100))
             .await?;
+
+        // Find the most recent message that is not a bot message, and starts with ~eval
+        let last_eval = messages.iter().find(|msg| {
+            !msg.author.bot && msg.content.starts_with("~eval") && msg.author.id == ctx.author().id
+        });
+
+        // If the user has already run an eval command, delete the message
+        if last_eval.is_some() {
+            let _ = last_eval.unwrap().delete(&ctx).await;
+            info!(
+                "User {} tried to run eval without permission, and I deleted the message",
+                ctx.author().id,
+            );
+        } else {
+            warn!(
+                "User {} tried to run eval without permission, but I couldn't delete the message",
+                ctx.author().id
+            );
+        }
 
         return Ok(());
     }
 
-    ctx.say(":gear: Processing...").await?;
+    let org_msg = ctx.say(":gear: Processing...").await?;
 
     // Create a temporary directory for the file
     let temp_dir = env::temp_dir();
@@ -35,7 +62,14 @@ pub async fn eval(
 
     // Write the code to a temporary file
     if let Err(err) = fs::write(&file_path, code.code) {
-        ctx.say(format!("Error writing to temporary file: {}", err))
+        org_msg
+            .edit(
+                ctx,
+                CreateReply::default().content(format!(
+                    "<:error:1310650177056538655> Error writing to file: {}",
+                    err
+                )),
+            )
             .await?;
         return Ok(());
     }
@@ -50,10 +84,12 @@ pub async fn eval(
 
     match compile_output {
         Ok(output) if output.status.success() => {
-            ctx.say(
-                "<:success:1310650176037453834> Compilation successful. Running the executable...",
-            )
-            .await?;
+            org_msg
+                .edit(
+                    ctx,
+                    CreateReply::default().content("<:success:1310650176037453834> Compilation successful. Running the executable..."),
+                )
+                .await?;
 
             // Run the compiled executable
             let output = Command::new(&executable_path).output();
@@ -62,45 +98,61 @@ pub async fn eval(
                 Ok(output) => {
                     let stdout = String::from_utf8_lossy(&output.stdout);
                     let stderr = String::from_utf8_lossy(&output.stderr);
-                    ctx.say(format!(
-                        "**Output:**\n```\n{}\n```\n**Errors:**\n```\n{}\n```",
-                        if stdout.trim().is_empty() {
-                            "<no output>"
-                        } else {
-                            stdout.trim()
-                        },
-                        if stderr.trim().is_empty() {
-                            "<no errors>"
-                        } else {
-                            stderr.trim()
-                        }
-                    ))
-                    .await?;
+
+                    // Only show stdout/stderr if they are not empty, edit original message
+                    let msg = "<:success:1310650176037453834> Exection successful";
+                    let msg = if !stdout.is_empty() {
+                        format!("{}\n\n**stdout**:\n```\n{}\n```", msg, stdout)
+                    } else {
+                        msg.to_string()
+                    };
+
+                    let msg = if !stderr.is_empty() {
+                        format!("{}\n\n**stderr**:\n```\n{}\n```", msg, stderr)
+                    } else {
+                        msg.to_string()
+                    };
+
+                    org_msg
+                        .edit(ctx, CreateReply::default().content(msg))
+                        .await?;
                 }
                 Err(err) => {
-                    ctx.say(format!(
-                        "<:error:1310650177056538655> Error running the executable: {}",
-                        err
-                    ))
-                    .await?;
+                    org_msg
+                        .edit(
+                            ctx,
+                            CreateReply::default().content(format!(
+                                "<:error:1310650177056538655> Error running executable: {}",
+                                err
+                            )),
+                        )
+                        .await?;
                 }
             }
         }
         Ok(output) => {
             // If compilation failed, display the compiler error output
             let stderr = String::from_utf8_lossy(&output.stderr);
-            ctx.say(format!(
-                "<:error:1310650177056538655> Compilation failed:\n```\n{}\n```",
-                stderr
-            ))
-            .await?;
+            org_msg
+                .edit(
+                    ctx,
+                    CreateReply::default().content(format!(
+                        "<:error:1310650177056538655> Compilation failed:\n```\n{}\n```",
+                        stderr
+                    )),
+                )
+                .await?;
         }
         Err(err) => {
-            ctx.say(format!(
-                "<:error:1310650177056538655> Error invoking rustc: {}",
-                err
-            ))
-            .await?;
+            org_msg
+                .edit(
+                    ctx,
+                    CreateReply::default().content(format!(
+                        "<:error:1310650177056538655> Error invoking rustc: {}",
+                        err
+                    )),
+                )
+                .await?;
         }
     }
 

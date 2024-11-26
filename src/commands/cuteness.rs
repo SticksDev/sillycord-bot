@@ -1,0 +1,56 @@
+use poise::CreateReply;
+use rand::Rng;
+use serenity::all::{CreateAllowedMentions, User};
+
+use crate::{Context, Error};
+
+/// Determine a user's cuteness
+#[poise::command(slash_command)]
+pub async fn cutenesss(
+    ctx: Context<'_>,
+    #[description = "The user to check"] user: User,
+) -> Result<(), Error> {
+    let thinking_messages = [
+        ":thinking: Thinking super hard...",
+        ":gear: Calculating...",
+        ":bar_chart: Crunching the numbers...",
+        ":bulb: Looking at the data...",
+        ":mag: Investigating...",
+        ":clipboard: Finalizing the report...",
+    ];
+
+    let current_thinking_index = 0;
+    let thinking_message = ctx.say(thinking_messages[current_thinking_index]).await?;
+
+    // Wait between .5 and 1.5 seconds for each message, then edit the message with the next thinking message
+    // On the last message, edit the message with the final message and wait 1.5 second
+    for i in 1..thinking_messages.len() {
+        let wait_time = rand::thread_rng().gen_range(500..1501);
+
+        // Are we on the last message?
+        if i == thinking_messages.len() - 1 {
+            tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+        } else {
+            tokio::time::sleep(std::time::Duration::from_millis(wait_time)).await;
+        }
+
+        thinking_message
+            .edit(ctx, CreateReply::default().content(thinking_messages[i]))
+            .await?;
+    }
+
+    thinking_message
+        .edit(
+            ctx,
+            CreateReply::default()
+                .content(format!(
+                    "I have determined that {} is {}% cute!",
+                    user.name,
+                    rand::thread_rng().gen_range(0..101)
+                ))
+                .allowed_mentions(CreateAllowedMentions::default().users(vec![user.id])),
+        )
+        .await?;
+
+    Ok(())
+}

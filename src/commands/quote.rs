@@ -9,7 +9,6 @@ pub async fn quote_action(
     #[description = "The target message to quote"] message: Message,
 ) -> Result<(), Error> {
     let quote = crate::structs::quote::Quote {
-        quote_id: 0,
         user_id: message.author.id.into(),
         username: message.author.name.clone(),
         quote: message.content.clone(),
@@ -19,6 +18,12 @@ pub async fn quote_action(
 
     if quote.user_id == quote.added_by {
         ctx.say(":x: You can't quote yourself").await?;
+        return Ok(());
+    }
+
+    // Cant quote the bot
+    if message.author.bot {
+        ctx.say(":x: You can't quote a bot").await?;
         return Ok(());
     }
 

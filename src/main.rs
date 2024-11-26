@@ -182,6 +182,7 @@ async fn main() {
                 commands::quote::quote_action(),
                 commands::quote::random_quote(),
                 commands::quote::user_quotes(),
+                commands::cuteness::cutenesss(),
             ],
             event_handler: |ctx, event, framework, data| {
                 Box::pin(event_handler(ctx, event, framework, data))
@@ -205,8 +206,13 @@ async fn main() {
                     uptime: std::time::Instant::now(),
                     config,
                     vouch_store: Mutex::new(Vec::new()),
-                    // Sticks, Emi, Katie
-                    owners: vec![1017196087276220447, 272871217256726531, 1033331958291369984],
+                    // Sticks, Emi, Katie, Eva
+                    owners: vec![
+                        1017196087276220447,
+                        272871217256726531,
+                        1033331958291369984,
+                        1138865297101705347,
+                    ],
                 })
             })
         })

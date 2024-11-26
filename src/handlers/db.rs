@@ -117,7 +117,6 @@ impl DatabaseController {
 
         match quote.await {
             Ok(q) => Ok(Some(Quote {
-                quote_id: q.quote_id,
                 user_id: q.user_id,
                 username: q.username,
                 quote: q.quote,
@@ -137,7 +136,6 @@ impl DatabaseController {
         let mut quotes = Vec::new();
         for q in quote {
             quotes.push(Quote {
-                quote_id: q.quote_id,
                 user_id: q.user_id,
                 username: q.username,
                 quote: q.quote,
