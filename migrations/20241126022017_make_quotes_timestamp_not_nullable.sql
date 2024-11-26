@@ -1,0 +1,3 @@
+-- Add migration script here
+ALTER TABLE quotes
+MODIFY added_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;

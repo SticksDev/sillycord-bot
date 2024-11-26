@@ -122,7 +122,7 @@ impl DatabaseController {
                 username: q.username,
                 quote: q.quote,
                 added_by: q.added_by,
-                added_at: q.added_at.unwrap(),
+                added_at: q.added_at,
             })),
             Err(sqlx::Error::RowNotFound) => Ok(None),
             Err(e) => Err(e),
@@ -142,7 +142,7 @@ impl DatabaseController {
                 username: q.username,
                 quote: q.quote,
                 added_by: q.added_by,
-                added_at: q.added_at.unwrap(),
+                added_at: q.added_at,
             });
         }
 

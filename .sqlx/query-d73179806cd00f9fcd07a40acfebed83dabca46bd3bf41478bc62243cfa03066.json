@@ -53,7 +53,7 @@
         "name": "added_at",
         "type_info": {
           "type": "Timestamp",
-          "flags": "UNSIGNED | BINARY | TIMESTAMP",
+          "flags": "NOT_NULL | UNSIGNED | BINARY | TIMESTAMP",
           "max_size": 19
         }
       }
@@ -67,7 +67,7 @@
       false,
       false,
       false,
-      true
+      false
     ]
   },
   "hash": "d73179806cd00f9fcd07a40acfebed83dabca46bd3bf41478bc62243cfa03066"
